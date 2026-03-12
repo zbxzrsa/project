@@ -8,3 +8,4 @@ venv/
 *.db
 data/
 .env
+frontend/next-env.d.ts
