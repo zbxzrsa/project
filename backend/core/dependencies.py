@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 from fastapi import Depends, HTTPException, status, Request
 
@@ -8,7 +8,7 @@ from backend.core.exceptions import ForbiddenException, UnauthorizedException
 
 
 class CurrentUser:
-    def __init__(self, id: UUID, tenant_id: UUID, role: str):
+    def __init__(self, id: Union[UUID, str], tenant_id: Union[UUID, str], role: str):
         self.id = id
         self.tenant_id = tenant_id
         self.role = UserRole(role) if role else UserRole.USER
@@ -20,8 +20,8 @@ async def get_current_active_user(
     if not current_user:
         raise UnauthorizedException()
     return CurrentUser(
-        id=UUID(current_user["id"]),
-        tenant_id=UUID(current_user["tenant_id"]),
+        id=current_user["id"],
+        tenant_id=current_user["tenant_id"],
         role=current_user["role"],
     )
 
