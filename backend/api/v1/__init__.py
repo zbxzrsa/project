@@ -12,6 +12,7 @@ from backend.api.v1 import (
     webhooks,
     api_keys,
     audit_logs,
+    llm_settings,
 )
 
 
@@ -28,3 +29,4 @@ api_router.include_router(dashboard.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(api_keys.router)
 api_router.include_router(audit_logs.router)
+api_router.include_router(llm_settings.router)

@@ -71,11 +71,22 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = ""
 
     # LLM Providers
+    # Priority 1: Internal Ollama server
+    INTERNAL_OLLAMA_URL: str = "http://10.122.129.225:1234"
+    INTERNAL_OLLAMA_MODEL: str = "qwen2.5-coder"
+    
+    # Priority 2: Default API key (for backward compatibility)
+    DEFAULT_OPENAI_API_KEY: str = "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"
+    
+    # User-provided keys (can override defaults)
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama2"
-    LLM_TIMEOUT_SECONDS: int = 30
+    LLM_TIMEOUT_SECONDS: int = 60
+    
+    # Provider priority order: internal_ollama -> openai -> anthropic -> ollama
+    LLM_PROVIDER_ORDER: str = "internal_ollama,openai,anthropic,ollama"
 
     # AWS
     AWS_REGION: str = "us-east-1"

@@ -10,7 +10,7 @@ from backend.llm.base import (
 from backend.llm.openai import OpenAIProvider
 from backend.llm.anthropic import AnthropicProvider
 from backend.llm.ollama import OllamaProvider
-from backend.llm.router import LLMRouter, LLMProviderType, llm_router
+from backend.llm.router import LLMRouter, LLMProviderType, llm_router, get_llm_router
 
 __all__ = [
     "LLMProvider",
@@ -26,4 +26,5 @@ __all__ = [
     "LLMRouter",
     "LLMProviderType",
     "llm_router",
+    "get_llm_router",
 ]
