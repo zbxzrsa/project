@@ -49,3 +49,28 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
+class OAuthUrlResponse(BaseModel):
+    url: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    code: str
+
+
+class GitHubUser(BaseModel):
+    id: int
+    login: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None

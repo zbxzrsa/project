@@ -11,6 +11,8 @@ from backend.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    create_password_reset_token,
+    verify_password_reset_token,
 )
 from backend.core.exceptions import (
     ValidationException,
@@ -27,6 +29,8 @@ from backend.schemas import (
     LoginRequest,
     TokenResponse,
     RefreshTokenRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm,
 )
 from backend.core.config import settings
 
@@ -145,3 +149,51 @@ async def get_current_user_info(
     if not current_user:
         raise NotFoundException("User", str(user.id))
     return current_user
+
+
+@router.post("/password-reset", status_code=status.HTTP_200_OK)
+async def request_password_reset(
+    reset_data: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(User).where(User.email == reset_data.email)
+    )
+    user = result.scalar_one_or_none()
+    
+    if user:
+        reset_token = create_password_reset_token(str(user.id))
+        # In production, send this token via email
+        # For now, we return it in the response (development only)
+        return {
+            "message": "If the email exists, a password reset link has been sent",
+            "reset_token": reset_token  # Remove in production
+        }
+    
+    return {
+        "message": "If the email exists, a password reset link has been sent"
+    }
+
+
+@router.post("/password-reset/confirm", response_model=UserResponse)
+async def confirm_password_reset(
+    reset_data: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = verify_password_reset_token(reset_data.token)
+    if not user_id:
+        raise UnauthorizedException("Invalid or expired password reset token")
+    
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise NotFoundException("User", user_id)
+    
+    user.password_hash = get_password_hash(reset_data.new_password)
+    await db.commit()
+    await db.refresh(user)
+    
+    return user

@@ -6,6 +6,11 @@ from backend.schemas.user import (
     LoginRequest,
     TokenResponse,
     RefreshTokenRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm,
+    OAuthUrlResponse,
+    OAuthCallbackRequest,
+    GitHubUser,
 )
 from backend.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from backend.schemas.review import ReviewCreate, ReviewUpdate, ReviewResponse
@@ -26,6 +31,11 @@ __all__ = [
     "LoginRequest",
     "TokenResponse",
     "RefreshTokenRequest",
+    "PasswordResetRequest",
+    "PasswordResetConfirm",
+    "OAuthUrlResponse",
+    "OAuthCallbackRequest",
+    "GitHubUser",
     "ProjectCreate",
     "ProjectUpdate",
     "ProjectResponse",

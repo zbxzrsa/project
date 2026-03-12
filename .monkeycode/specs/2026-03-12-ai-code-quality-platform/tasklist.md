@@ -78,12 +78,12 @@
   - Validate credentials and generate JWT tokens
   - Implement refresh token rotation
 
-- [ ] 3.4 Implement password reset
+- [x] 3.4 Implement password reset
   - Create `POST /api/v1/auth/password-reset` endpoint
   - Generate password reset tokens with expiration
   - Implement password update flow
 
-- [ ] 3.5 Implement OAuth integration
+- [x] 3.5 Implement OAuth integration
   - Create GitHub OAuth provider integration
   - Implement OAuth callback handling
   - Link OAuth accounts to existing users

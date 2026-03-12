@@ -21,6 +21,11 @@ class User(Base):
     is_superuser = Column(String(10), default="false")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # OAuth fields
+    github_id = Column(String(100), unique=True, nullable=True)
+    github_access_token = Column(String(255), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
 
     tenant = relationship("Tenant", back_populates="users", foreign_keys=[tenant_id])
     audit_logs = relationship("AuditLog", back_populates="user", foreign_keys="[AuditLog.user_id]")

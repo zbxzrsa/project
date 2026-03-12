@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = Field(default="change-me-in-production")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 1
     ALGORITHM: str = "HS256"
 
     # Database
@@ -87,6 +88,14 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+
+    # OAuth Providers
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[str] = None
+    GITHUB_REDIRECT_URI: str = "http://localhost:3000/auth/callback/github"
+
+    # Frontend URL
+    FRONTEND_URL: str = "http://localhost:3000"
 
 
 settings = Settings()
