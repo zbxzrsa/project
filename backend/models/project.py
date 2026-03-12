@@ -21,3 +21,5 @@ class Project(Base):
 
     tenant = relationship("Tenant", back_populates="projects", foreign_keys=[tenant_id])
     reviews = relationship("Review", back_populates="project", cascade="all, delete-orphan", foreign_keys="[Review.project_id]")
+    branches = relationship("Branch", back_populates="project", cascade="all, delete-orphan")
+    analyses = relationship("AnalysisTask", back_populates="project", cascade="all, delete-orphan")

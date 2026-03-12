@@ -19,6 +19,7 @@ from backend.api.v1 import (
     compliance,
     metrics,
     tasks,
+    repositories,
 )
 
 
@@ -42,3 +43,4 @@ api_router.include_router(feedback.router)
 api_router.include_router(compliance.router)
 api_router.include_router(metrics.router)
 api_router.include_router(tasks.router)
+api_router.include_router(repositories.router)

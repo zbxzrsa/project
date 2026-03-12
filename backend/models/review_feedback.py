@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey
 from backend.core.database import Base
 
 
@@ -12,5 +12,5 @@ class ReviewFeedback(Base):
     issue_id = Column(String(255), nullable=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     action = Column(String(50), nullable=False)
-    comment = Column(Text, nullable=True)
+    comment = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
