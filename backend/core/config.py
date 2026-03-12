@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # Database
+    DATABASE_TYPE: str = Field(default="sqlite")
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
@@ -32,10 +34,18 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        if self.DATABASE_TYPE == "sqlite":
+            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "app.db")
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            return f"sqlite+aiosqlite:///{db_path}"
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
+        if self.DATABASE_TYPE == "sqlite":
+            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "app.db")
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            return f"sqlite:///{db_path}"
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis

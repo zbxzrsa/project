@@ -55,7 +55,7 @@ async def register(
         tenant_id = user_data.tenant_id
 
     user = User(
-        id=uuid4(),
+        id=str(uuid4()),
         tenant_id=tenant_id,
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
