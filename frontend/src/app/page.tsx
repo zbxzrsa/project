@@ -1,11 +1,25 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      router.push("/projects");
+    }
+  }, [router]);
+
   return (
     <main className="flex min-h-screen flex-col items-center p-24">
       <h1 className="text-4xl font-bold mb-4">AI Code Quality Platform</h1>
-      <p className="text-lg text-gray-600">
+      <p className="text-lg text-gray-600 mb-8">
         AI-powered code quality and architecture analysis
       </p>
-      <div className="mt-8 flex gap-4">
+      <div className="flex gap-4">
         <a
           href="/login"
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
