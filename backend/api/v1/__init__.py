@@ -14,6 +14,11 @@ from backend.api.v1 import (
     audit_logs,
     llm_settings,
     admin,
+    branches,
+    feedback,
+    compliance,
+    metrics,
+    tasks,
 )
 
 
@@ -32,3 +37,8 @@ api_router.include_router(api_keys.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(llm_settings.router)
 api_router.include_router(admin.router)
+api_router.include_router(branches.router)
+api_router.include_router(feedback.router)
+api_router.include_router(compliance.router)
+api_router.include_router(metrics.router)
+api_router.include_router(tasks.router)

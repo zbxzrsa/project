@@ -66,20 +66,28 @@ export interface Branch {
   id: string;
   name: string;
   project_id: string;
+  is_default: boolean;
   last_commit_sha: string | null;
+  last_commit_message: string | null;
+  last_commit_author: string | null;
   last_analysis_at: string | null;
-  status: string;
+  analysis_status: string;
   issues_count: number;
   critical_issues: number;
+  score: number | null;
+  created_at: string;
 }
 
 export interface AnalysisTask {
   id: string;
   project_id: string;
+  branch_id: string | null;
   branch_name: string;
+  commit_sha: string | null;
   status: "pending" | "queued" | "processing" | "completed" | "failed";
   stage: string;
   progress: number;
+  results: Record<string, unknown> | null;
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
@@ -146,4 +154,56 @@ export interface DashboardStats {
   pending_reviews: number;
   critical_issues: number;
   architecture_health: number;
+}
+
+export interface ReviewFeedback {
+  id: string;
+  review_id: string;
+  issue_id: string | null;
+  user_id: string;
+  action: "accepted" | "dismissed" | "fixed";
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ComplianceReport {
+  total_issues: number;
+  severity_counts: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  compliance_score: number;
+  issues: ComplianceIssue[];
+}
+
+export interface ComplianceIssue {
+  standard: string;
+  category: string;
+  severity: string;
+  title: string;
+  description: string;
+  location: Record<string, unknown>;
+  remediation: string | null;
+}
+
+export interface MetricsData {
+  project_count: number;
+  review_stats: {
+    total: number;
+    completed: number;
+    avg_score: number;
+  };
+  quality_trend: Array<{
+    period: string;
+    avg_score: number;
+  }>;
+  technical_debt: {
+    total_issues: number;
+    by_severity: Record<string, number>;
+    estimated_hours: number;
+  };
+  issues_by_category: Record<string, number>;
+  period_days: number;
 }
