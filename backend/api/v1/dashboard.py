@@ -29,22 +29,8 @@ async def get_dashboard(
     )
     total_reviews = reviews_result.scalar() or 0
 
-    avg_score_result = await db.execute(
-        select(func.avg(Review.score))
-        .join(Project, Review.project_id == Project.id)
-        .where(Project.tenant_id == user.tenant_id, Review.score.isnot(None))
-    )
-    avg_score = avg_score_result.scalar() or 0
-
-    critical_result = await db.execute(
-        select(func.count(Review.id))
-        .join(Project, Review.project_id == Project.id)
-        .where(
-            Project.tenant_id == user.tenant_id,
-            Review.results.contains("critical"),
-        )
-    )
-    critical_issues = critical_result.scalar() or 0
+    avg_score = 0
+    critical_issues = 0
 
     recent_reviews_result = await db.execute(
         select(Review, Project.name)
@@ -53,22 +39,35 @@ async def get_dashboard(
         .order_by(Review.created_at.desc())
         .limit(10)
     )
-    recent_reviews = [
-        {
+
+    scores = []
+    recent_reviews = []
+    for review, name in recent_reviews_result.all():
+        review_score = 0
+        if review.results and isinstance(review.results, dict):
+            review_score = review.results.get("score", 0)
+            if isinstance(review_score, int):
+                scores.append(review_score)
+            issues = review.results.get("issues", [])
+            if isinstance(issues, list):
+                critical_issues += sum(1 for i in issues if i.get("severity") in ["critical", "high"])
+        
+        recent_reviews.append({
             "id": str(review.id),
             "projectName": name,
-            "score": review.score or 0,
+            "score": review_score,
             "status": review.status,
             "createdAt": review.created_at.isoformat() if review.created_at else "",
-        }
-        for review, name in recent_reviews_result.all()
-    ]
+        })
+
+    if scores:
+        avg_score = sum(scores) // len(scores)
 
     return {
         "stats": {
             "totalProjects": total_projects,
             "totalReviews": total_reviews,
-            "avgScore": int(avg_score),
+            "avgScore": avg_score,
             "criticalIssues": critical_issues,
         },
         "recent_reviews": recent_reviews,
