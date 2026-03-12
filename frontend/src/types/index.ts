@@ -61,3 +61,89 @@ export interface TokenResponse {
   refresh_token: string;
   token_type: string;
 }
+
+export interface Branch {
+  id: string;
+  name: string;
+  project_id: string;
+  last_commit_sha: string | null;
+  last_analysis_at: string | null;
+  status: string;
+  issues_count: number;
+  critical_issues: number;
+}
+
+export interface AnalysisTask {
+  id: string;
+  project_id: string;
+  branch_name: string;
+  status: "pending" | "queued" | "processing" | "completed" | "failed";
+  stage: string;
+  progress: number;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface ReviewIssue {
+  id: string;
+  severity: "critical" | "major" | "minor" | "info";
+  category: string;
+  title: string;
+  description: string;
+  file_path: string;
+  line_number: number | null;
+  suggestion: string | null;
+}
+
+export interface ProjectAnalysis {
+  id: string;
+  project_id: string;
+  branch_name: string;
+  commit_sha: string;
+  score: number;
+  issues: ReviewIssue[];
+  strengths: string[];
+  improvements: string[];
+  analyzed_at: string;
+}
+
+export interface ArchitectureNode {
+  id: string;
+  name: string;
+  type: "file" | "module" | "class" | "function";
+  file_path: string;
+  line_start: number | null;
+  line_end: number | null;
+  branches: string[];
+}
+
+export interface ArchitectureEdge {
+  source: string;
+  target: string;
+  type: string;
+}
+
+export interface ArchitectureGraph {
+  nodes: ArchitectureNode[];
+  edges: ArchitectureEdge[];
+  nodeCount: number;
+  edgeCount: number;
+}
+
+export interface Activity {
+  id: string;
+  type: "review" | "project" | "analysis";
+  action: string;
+  description: string;
+  project_name: string | null;
+  created_at: string;
+}
+
+export interface DashboardStats {
+  total_projects: number;
+  pending_reviews: number;
+  critical_issues: number;
+  architecture_health: number;
+}

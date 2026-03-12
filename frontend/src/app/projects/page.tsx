@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { projectApi } from "@/lib/projectApi";
 import { Project } from "@/types";
 import { 
   LayoutDashboard, 
@@ -14,20 +13,26 @@ import {
   Clock,
   MoreVertical,
   Trash2,
-  Settings,
   LogOut,
-  Code2
+  Code2,
+  Github,
+  Upload
 } from "lucide-react";
 
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectUrl, setNewProjectUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -39,10 +44,38 @@ export default function ProjectsPage() {
     fetchProjects();
   }, [router]);
 
+  useEffect(() => {
+    let filtered = projects;
+
+    if (searchQuery) {
+      filtered = filtered.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.repository_url?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((p) => {
+        if (categoryFilter === "has_repo") return !!p.repository_url;
+        if (categoryFilter === "no_repo") return !p.repository_url;
+        return true;
+      });
+    }
+
+    setFilteredProjects(filtered);
+  }, [projects, searchQuery, categoryFilter]);
+
   const fetchProjects = async () => {
     try {
-      const data = await projectApi.getAll();
-      setProjects(data);
+      const response = await fetch("/api/v1/projects", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+      }
     } catch (err) {
       setError("Failed to load projects");
     } finally {
@@ -53,9 +86,16 @@ export default function ProjectsPage() {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await projectApi.create({
-        name: newProjectName,
-        repository_url: newProjectUrl || undefined,
+      await fetch("/api/v1/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({
+          name: newProjectName,
+          repository_url: newProjectUrl || undefined,
+        }),
       });
       setShowModal(false);
       setNewProjectName("");
@@ -66,16 +106,55 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+
+    try {
+      await fetch(`/api/v1/projects/${projectToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
+      fetchProjects();
+    } catch (err) {
+      setError("Failed to delete project");
+    }
+  };
+
+  const handleConnectGitHub = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/oauth/github`;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", file.name.replace(".zip", ""));
+
+    try {
+      await fetch("/api/v1/projects/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: formData,
+      });
+      fetchProjects();
+    } catch (err) {
+      setError("Failed to upload project");
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     router.push("/login");
   };
-
-  const filteredProjects = projects.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.repository_url?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   if (isLoading) {
     return (
@@ -116,6 +195,27 @@ export default function ProjectsPage() {
                   <FolderKanban className="w-4 h-4" />
                   Projects
                 </Link>
+                <Link
+                  href="/pull-requests"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                >
+                  <GitBranch className="w-4 h-4" />
+                  Pull Requests
+                </Link>
+                <Link
+                  href="/architecture"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                >
+                  <Code2 className="w-4 h-4" />
+                  Architecture
+                </Link>
+                <Link
+                  href="/analysis-queue"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                >
+                  <Clock className="w-4 h-4" />
+                  Analysis Queue
+                </Link>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -144,13 +244,13 @@ export default function ProjectsPage() {
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            New Project
+            Add Project
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        {/* Search and Filter */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -160,6 +260,15 @@ export default function ProjectsPage() {
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">All Projects</option>
+            <option value="has_repo">With Repository</option>
+            <option value="no_repo">Without Repository</option>
+          </select>
         </div>
 
         {error && (
@@ -175,14 +284,14 @@ export default function ProjectsPage() {
               <FolderKanban className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchQuery ? "No projects found" : "No projects yet"}
+              {searchQuery || categoryFilter !== "all" ? "No projects found" : "No projects yet"}
             </h3>
             <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              {searchQuery 
-                ? "Try adjusting your search query" 
+              {searchQuery || categoryFilter !== "all" 
+                ? "Try adjusting your search or filters" 
                 : "Create your first project to start analyzing your code quality"}
             </p>
-            {!searchQuery && (
+            {!searchQuery && categoryFilter === "all" && (
               <button
                 onClick={() => setShowModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
@@ -195,50 +304,55 @@ export default function ProjectsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map((project) => (
-              <Link
+              <div
                 key={project.id}
-                href={`/projects/${project.id}`}
                 className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-indigo-200 transition-all"
               >
                 <div className="flex items-start justify-between">
-                  <div className="p-3 bg-indigo-50 rounded-lg">
-                    <FolderKanban className="w-6 h-6 text-indigo-600" />
-                  </div>
+                  <Link href={`/projects/${project.id}`} className="flex-1">
+                    <div className="p-3 bg-indigo-50 rounded-lg">
+                      <FolderKanban className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    
+                    <h3 className="mt-4 text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                      {project.name}
+                    </h3>
+                    
+                    {project.repository_url && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                        <GitBranch className="w-4 h-4" />
+                        <span className="truncate">{project.repository_url}</span>
+                      </div>
+                    )}
+                    
+                    <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+                      <Clock className="w-3 h-3" />
+                      Created {new Date(project.created_at).toLocaleDateString()}
+                    </div>
+                  </Link>
                   <button 
-                    onClick={(e) => e.preventDefault()}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setProjectToDelete(project);
+                      setShowDeleteModal(true);
+                    }}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <MoreVertical className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
-                
-                <h3 className="mt-4 text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                  {project.name}
-                </h3>
-                
-                {project.repository_url && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
-                    <GitBranch className="w-4 h-4" />
-                    <span className="truncate">{project.repository_url}</span>
-                  </div>
-                )}
-                
-                <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-                  <Clock className="w-3 h-3" />
-                  Created {new Date(project.created_at).toLocaleDateString()}
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
       </main>
 
-      {/* Create Modal */}
+      {/* Add Project Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Create New Project</h2>
+              <h2 className="text-xl font-bold text-gray-900">Add New Project</h2>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
@@ -248,52 +362,127 @@ export default function ProjectsPage() {
                 </svg>
               </button>
             </div>
-            
-            <form onSubmit={handleCreateProject}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="My Awesome Project"
-                    required
-                  />
+
+            <div className="space-y-4">
+              {/* GitHub Connect */}
+              <button
+                onClick={handleConnectGitHub}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
+              >
+                <Github className="w-5 h-5" />
+                Connect GitHub
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Repository URL <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={newProjectUrl}
-                    onChange={(e) => setNewProjectUrl(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="https://github.com/owner/repo"
-                  />
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Or</span>
                 </div>
               </div>
-              
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
-                >
-                  Create Project
-                </button>
+
+              {/* Upload ZIP */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="w-5 h-5" />
+                Upload ZIP Archive
+              </button>
+              <input
+                type="file"
+                accept=".zip"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Or</span>
+                </div>
               </div>
-            </form>
+
+              {/* Manual Create */}
+              <form onSubmit={handleCreateProject}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="My Awesome Project"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Repository URL <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={newProjectUrl}
+                      onChange={(e) => setNewProjectUrl(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="https://github.com/owner/repo"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Project</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProjectToDelete(null);
+                }}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
