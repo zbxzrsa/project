@@ -16,6 +16,20 @@ from backend.core.security import get_password_hash
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    user: CurrentUser = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(User).where(User.id == user.id)
+    )
+    current_user = result.scalar_one_or_none()
+    if not current_user:
+        raise NotFoundException("User", str(user.id))
+    return current_user
+
+
 @router.get("", response_model=List[UserResponse])
 async def list_users(
     skip: int = 0,
@@ -62,7 +76,7 @@ async def create_user(
 
     new_user = User(
         id=UUID,
-        tenant_id=user.tenant_id,
+        tenant_id=current_user.tenant_id,
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
         full_name=user_data.full_name,
@@ -82,7 +96,7 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(User).where(User.id == user_id, User.tenant_id == user.tenant_id)
+        select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
     )
     db_user = result.scalar_one_or_none()
     if not db_user:
@@ -111,7 +125,7 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(User).where(User.id == user_id, User.tenant_id == user.tenant_id)
+        select(User).where(User.id == user_id, User.tenant_id == current_user.tenant_id)
     )
     db_user = result.scalar_one_or_none()
     if not db_user:
