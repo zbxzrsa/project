@@ -85,4 +85,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 ws_router = Router()
-ws_router.add_api_websocket_route("/ws", websocket_endpoint)
+ws_router.add_websocket_route("/ws", websocket_endpoint)
