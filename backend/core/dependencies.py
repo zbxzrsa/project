@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, status, Request
 
 from backend.core.security import get_current_user
 from backend.core.permissions import UserRole, Permission, has_permission
-from backend.core.exceptions import ForbiddenException, UnauthorizedException
+from backend.core.exceptions import ForbiddenException, UnauthorizedException, NotFoundException
 
 
 class CurrentUser:
@@ -52,5 +52,30 @@ def require_role(allowed_roles: list[UserRole]):
 
 async def get_tenant_id(
     user: CurrentUser = Depends(get_current_active_user),
-) -> UUID:
-    return user.tenant_id
+) -> str:
+    return str(user.tenant_id)
+
+
+def require_owner_or_admin(owner_id: Union[UUID, str]):
+    async def ownership_checker(
+        user: CurrentUser = Depends(get_current_active_user),
+    ) -> CurrentUser:
+        if user.role == UserRole.SUPERADMIN:
+            return user
+        if str(user.id) != str(owner_id) and user.role != UserRole.ADMIN:
+            raise ForbiddenException(
+                "You don't have permission to access this resource"
+            )
+        return user
+    return ownership_checker
+
+
+async def verify_tenant_access(
+    resource_tenant_id: UUID,
+    user: CurrentUser = Depends(get_current_active_user),
+) -> CurrentUser:
+    if user.role == UserRole.SUPERADMIN:
+        return user
+    if str(resource_tenant_id) != str(user.tenant_id):
+        raise NotFoundException("Resource")
+    return user

@@ -2,12 +2,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.core.config import settings
 from backend.core.database import init_db
 from backend.core.exceptions import AppException
 from backend.core.logging import setup_logging, logger
 from backend.api.v1 import api_router
+from backend.core.websocket import ws_router
 
 
 @asynccontextmanager
@@ -59,6 +61,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+app.include_router(ws_router)
 
 
 @app.get("/health")

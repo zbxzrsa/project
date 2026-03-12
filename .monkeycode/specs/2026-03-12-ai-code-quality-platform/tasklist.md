@@ -1,183 +1,278 @@
-# Phase 1 Implementation Plan
+# 完整项目实施计划
 
-## Phase 1: Foundation (Week 1-4)
+## 阶段 1: 核心功能完善 (Week 1-3)
 
-### 1. Project Structure Setup
+### 1.1 完善认证和授权系统
 
-- [ ] 1.1 Create backend directory structure
-  - Create `backend/` directory with `api/`, `core/`, `models/`, `schemas/`, `services/`, `repositories/`, `utils/` subdirectories
-  - Set up Python virtual environment and requirements.txt with FastAPI, SQLAlchemy, Pydantic, Celery dependencies
-  - Configure pytest and test directory structure
+- [ ] 1.1.1 实现 OAuth GitHub 回调处理
+  - 创建 `backend/api/v1/oauth.py` 的完整 OAuth 流程
+  - 实现 GitHub OAuth 状态管理和令牌交换
+  - 添加用户账户关联逻辑
 
-- [ ] 1.2 Create frontend directory structure
-  - Create `frontend/` directory with Next.js App Router structure
-  - Set up TypeScript, TailwindCSS, Zustand, React Query dependencies
-  - Configure ESLint and Prettier
+- [ ] 1.1.2 完善用户权限装饰器
+  - 实现 `backend/core/dependencies.py` 中的权限检查
+  - 添加角色验证装饰器
+  - 实现资源所有权验证
 
-- [ ] 1.3 Create infrastructure directory structure
-  - Create `infra/` directory with Terraform module directories
-  - Set up AWS provider configuration
-  - Create environment configuration templates
+- [ ] 1.1.3 实现多租户数据隔离
+  - 添加 tenant_id 过滤到所有查询
+  - 实现租户上下文管理器
 
-- [ ] 1.4 Set up Docker Compose for local development
-  - Create `docker-compose.yml` with PostgreSQL, Redis, Neo4j services
-  - Configure development environment variables
-  - Set up hot-reload for backend and frontend
+### 1.2 完善数据库迁移和模型
 
-### 2. Database Design Implementation
+- [ ] 1.2.1 创建 Alembic 迁移配置
+  - 初始化 Alembic 环境
+  - 生成所有表的初始迁移脚本
+  - 配置迁移版本管理
 
-- [ ] 2.1 Create SQLAlchemy base models
-  - Implement `backend/core/database.py` with session management
-  - Create base model class with UUID primary key and timestamps
-  - Set up Alembic for database migrations
+- [ ] 1.2.2 完善 Review 模型关联
+  - 添加 Review 与 User 的关联
+  - 实现审查状态机
+  - 添加结果 JSONB 索引
 
-- [ ] 2.2 Implement Tenant model
-  - Create `backend/models/tenant.py` with multi-tenant support
-  - Add settings JSONB field for tenant-specific configuration
+### 1.3 实现 Neo4j 图数据库集成
 
-- [ ] 2.3 Implement User model
-  - Create `backend/models/user.py` with tenant relationship
-  - Add password hashing with bcrypt
-  - Implement role field with enum
+- [ ] 1.3.1 创建 Neo4j 连接管理
+  - 实现 `backend/core/neo4j.py` 连接池
+  - 添加重试和错误处理机制
+  - 配置事务管理
 
-- [ ] 2.4 Implement Project model
-  - Create `backend/models/project.py` with tenant relationship
-  - Add repository URL and settings fields
+- [ ] 1.3.2 实现代码实体识别
+  - 创建 `backend/services/graph_builder.py`
+  - 实现模块、类、函数实体提取
+  - 支持 Python、JavaScript/TypeScript、Java
 
-- [ ] 2.5 Implement Review model
-  - Create `backend/models/review.py` with project relationship
-  - Add status enum and JSONB results field
+- [ ] 1.3.3 构建依赖关系图谱
+  - 实现导入/导出关系提取
+  - 构建函数调用关系
+  - 实现继承关系分析
 
-- [ ] 2.6 Implement FeatureFlag model
-  - Create `backend/models/feature_flag.py` with tenant relationship
-  - Add enabled boolean and rules JSONB fields
+### 1.4 完善代码审查服务
 
-- [ ] 2.7 Implement AuditLog model
-  - Create `backend/models/audit_log.py` with user and tenant relationships
-  - Add action, details, and IP address fields
+- [ ] 1.4.1 实现异步审查任务
+  - 创建 Celery 任务定义
+  - 实现任务队列配置
+  - 添加进度跟踪
 
-- [ ] 2.8 Create Pydantic schemas
-  - Create `backend/schemas/` with request/response schemas for all models
-  - Implement validation with Pydantic v2
-  - Add OpenAPI schema generation
+- [ ] 1.4.2 实现多文件审查
+  - 支持代码仓库克隆和扫描
+  - 实现文件级别分析
+  - 生成聚合报告
 
-### 3. User Authentication System
+- [ ] 1.4.3 添加 OWASP 和 ISO 映射
+  - 完善安全问题分类
+  - 实现 ISO/IEC 25010 映射
+  - 生成合规报告
 
-- [ ] 3.1 Implement JWT authentication
-  - Create `backend/core/security.py` with JWT token generation and validation
-  - Configure access and refresh token settings
-  - Implement token expiration handling
+## 阶段 2: 前端界面完善 (Week 4-6)
 
-- [ ] 3.2 Implement user registration
-  - Create `POST /api/v1/auth/register` endpoint
-  - Add email validation and password strength requirements
-  - Implement tenant creation for new organizations
+### 2.1 完善页面组件
 
-- [ ] 3.3 Implement user login
-  - Create `POST /api/v1/auth/login` endpoint
-  - Validate credentials and generate JWT tokens
-  - Implement refresh token rotation
+- [ ] 2.1.1 实现 Dashboard 首页
+  - 创建统计卡片组件
+  - 实现最近审查列表
+  - 添加项目概览图表
 
-- [x] 3.4 Implement password reset
-  - Create `POST /api/v1/auth/password-reset` endpoint
-  - Generate password reset tokens with expiration
-  - Implement password update flow
+- [ ] 2.1.2 实现项目详情页
+  - 添加代码审查历史
+  - 实现依赖图可视化
+  - 创建审查结果详情
 
-- [x] 3.5 Implement OAuth integration
-  - Create GitHub OAuth provider integration
-  - Implement OAuth callback handling
-  - Link OAuth accounts to existing users
+- [ ] 2.1.3 实现管理后台
+  - 创建用户管理页面
+  - 实现租户设置页面
+  - 添加系统配置界面
 
-### 4. RBAC Permission System
+### 2.2 实现前端状态管理
 
-- [ ] 4.1 Define permission enums and roles
-  - Create `backend/core/permissions.py` with permission constants
-  - Define role hierarchy (superadmin, admin, user, readonly)
-  - Map permissions to roles
+- [ ] 2.2.1 完善 Zustand Store
+  - 创建认证状态管理
+  - 实现项目状态管理
+  - 添加通知状态
 
-- [ ] 4.2 Implement permission decorators
-  - Create `backend/core/dependencies.py` with dependency injection
-  - Implement `require_permission` decorator
-  - Add role-based endpoint protection
+- [ ] 2.2.2 完善 React Query
+  - 配置 API 客户端
+  - 实现缓存策略
+  - 添加错误处理
 
-- [ ] 4.3 Implement role management
-  - Create `GET/PUT /api/v1/users/{id}/role` endpoints
-  - Add role assignment validation
-  - Implement role change audit logging
+### 2.3 实现 UI 组件库
 
-- [ ] 4.4 Implement tenant access control
-  - Add tenant_id validation to all queries
-  - Implement multi-tenant data isolation
-  - Add tenant context to all operations
+- [ ] 2.3.1 创建基础 UI 组件
+  - Button, Input, Card 组件
+  - Modal, Dropdown 组件
+  - Table, Pagination 组件
 
-- [ ] 4.5 Implement resource ownership
-  - Create ownership validation for projects and reviews
-  - Add owner-only modification rules
-  - Implement sharing with permission levels
+- [ ] 2.3.2 实现数据可视化
+  - 代码质量评分图表
+  - 问题分布饼图
+  - 趋势折线图
 
-### 5. API Router Structure
+## 阶段 3: GitHub 集成 (Week 7-8)
 
-- [ ] 5.1 Create API main router
-  - Create `backend/api/main.py` with FastAPI application
-  - Configure CORS and middleware
-  - Set up API versioning (/api/v1/)
+### 3.1 实现 GitHub Webhook
 
-- [ ] 5.2 Create auth router
-  - Create `backend/api/v1/auth.py` with all auth endpoints
-  - Implement login, register, logout, refresh endpoints
+- [ ] 3.1.1 创建 Webhook 处理端点
+  - 实现 `POST /api/v1/webhooks/github`
+  - 验证 Webhook 签名
+  - 解析 PR 事件
 
-- [ ] 5.3 Create users router
-  - Create `backend/api/v1/users.py` with user CRUD
-  - Add pagination and filtering
+- [ ] 3.1.2 实现自动审查触发
+  - 监听 PR opened, synchronize 事件
+  - 自动克隆代码并审查
+  - 发布审查结果到 PR
 
-- [ ] 5.4 Create tenants router
-  - Create `backend/api/v1/tenants.py` with tenant management
-  - Add tenant settings management
+### 3.2 实现 GitHub API 集成
 
-### 6. Configuration Management
+- [ ] 3.2.1 创建 GitHub 客户端
+  - 实现 `backend/services/github_client.py`
+  - 添加速率限制处理
+  - 实现文件内容获取
 
-- [ ] 6.1 Create configuration system
-  - Create `backend/core/config.py` with Pydantic settings
-  - Support environment variable overrides
-  - Add validation for required fields
+- [ ] 3.2.2 实现 PR 评论
+  - 格式化审查结果为 Markdown
+  - 添加审查评论到 PR
+  - 实现质量门禁检查
 
-- [ ] 6.2 Create secrets management
-  - Implement secret encryption for sensitive data
-  - Create database credentials management
-  - Add LLM API key secure storage
+## 阶段 4: 实时通知和 Feature Flags (Week 9-10)
 
-### 7. Logging and Error Handling
+### 4.1 实现 WebSocket 通知
 
-- [ ] 7.1 Implement structured logging
-  - Create `backend/core/logging.py` with JSON formatter
-  - Add request ID tracking
-  - Configure CloudWatch integration
+- [ ] 4.1.1 创建 WebSocket 端点
+  - 实现 `backend/api/v1/ws.py`
+  - 添加连接认证
+  - 实现心跳机制
 
-- [ ] 7.2 Implement global exception handler
-  - Create custom exception classes
-  - Add error response standardization
-  - Implement detailed error logging
+- [ ] 4.1.2 实现消息推送
+  - 审查完成通知
+  - 任务进度更新
+  - 系统告警推送
 
-### 8. Checkpoint - Verify Core Foundation
+### 4.2 完善 Feature Flag 系统
 
-- [ ] 8.1 Run database migrations
-  - Execute Alembic migration to create all tables
-  - Verify table structure matches design
+- [ ] 4.2.1 实现 Flag 评估引擎
+  - 创建 `backend/services/feature_flag.py`
+  - 实现规则匹配引擎
+  - 添加用户群体过滤
 
-- [ ] 8.2 Test authentication flow
-  - Register new user
-  - Login and receive tokens
-  - Refresh token
-  - Access protected endpoint
+- [ ] 4.2.2 实现 Flag 管理 API
+  - 创建、更新、删除 Flag
+  - 实现规则配置
+  - 添加使用统计
 
-- [ ] 8.3 Test RBAC enforcement
-  - Verify role-based access control
-  - Test permission denied scenarios
-  - Verify multi-tenant data isolation
+## 阶段 5: 部署和运维 (Week 11-12)
 
-## References
+### 5.1 完善 Terraform 部署
 
-- R001: User authentication and multi-tenant management
-- R002: Role-based access control (RBAC)
-- Requirements: requirements.md sections R001-R002
+- [ ] 5.1.1 完善 VPC 模块
+  - 实现多可用区配置
+  - 添加私有子网路由
+  - 配置 NAT Gateway
 
+- [ ] 5.1.2 完善 RDS 模块
+  - 配置 PostgreSQL 实例
+  - 实现多可用区部署
+  - 添加备份策略
+
+- [ ] 5.1.3 完善 ECS 服务
+  - 创建 API 服务任务定义
+  - 配置 Celery Worker
+  - 实现前端服务
+
+### 5.2 实现监控告警
+
+- [ ] 5.2.1 配置 CloudWatch 日志
+  - 设置日志组
+  - 配置日志保留策略
+  - 实现结构化日志
+
+- [ ] 5.2.2 创建告警规则
+  - CPU/内存使用告警
+  - API 错误率告警
+  - LLM 延迟告警
+
+### 5.3 完善测试覆盖
+
+- [ ] 5.3.1 编写后端单元测试
+  - 认证流程测试
+  - API 端点测试
+  - 服务层测试
+
+- [ ] 5.3.2 编写集成测试
+  - 数据库操作测试
+  - Redis 缓存测试
+  - LLM 集成测试
+
+- [ ] 5.3.3 编写 E2E 测试
+  - 用户流程测试
+  - 审查流程测试
+  - GitHub 集成测试
+
+## 阶段 6: 生产优化 (Week 13-14)
+
+### 6.1 性能优化
+
+- [ ] 6.1.1 优化数据库查询
+  - 添加必要索引
+  - 优化 N+1 查询
+  - 实现查询缓存
+
+- [ ] 6.1.2 优化 LLM 调用
+  - 实现响应缓存
+  - 添加批处理支持
+  - 优化 token 使用
+
+### 6.2 安全加固
+
+- [ ] 6.2.1 完善数据加密
+  - 实现敏感字段加密
+  - 添加密钥轮换
+  - 配置 TLS
+
+- [ ] 6.2.2 完善审计日志
+  - 记录所有敏感操作
+  - 实现日志导出
+  - 配置合规报告
+
+### 6.3 文档完善
+
+- [ ] 6.3.1 完善 API 文档
+  - 添加 OpenAPI 注释
+  - 生成交互式文档
+  - 添加使用示例
+
+- [ ] 6.3.2 完善部署文档
+  - 编写部署指南
+  - 添加故障排查手册
+  - 配置运维手册
+
+---
+
+## 检查点
+
+- [ ] 检查点 1: 确保认证系统完整工作
+- [ ] 检查点 2: 确保 Neo4j 图谱正确构建
+- [ ] 检查点 3: 确保代码审查流程完整
+- [ ] 检查点 4: 确保前端界面可用
+- [ ] 检查点 5: 确保 GitHub 集成工作
+- [ ] 检查点 6: 确保 Terraform 部署成功
+- [ ] 检查点 7: 确保所有测试通过
+
+## 依赖关系
+
+- 1.1.1 → 1.1.2 → 1.1.3
+- 1.2.1 → 1.2.2
+- 1.3.1 → 1.3.2 → 1.3.3
+- 1.4.1 → 1.4.2 → 1.4.3
+- 2.1.x 依赖 1.1.x
+- 3.1.x 依赖 1.4.x
+- 4.1.x 依赖 1.1.x
+- 5.1.x 依赖所有后端功能
+- 5.3 依赖相应功能模块
+
+## 优先级排序
+
+1. **最高优先级**: 1.1, 1.2, 1.3 - 核心基础功能
+2. **高优先级**: 1.4, 2.1, 2.2 - 核心业务功能
+3. **中优先级**: 2.3, 3.1, 3.2 - 用户体验
+4. **低优先级**: 4.1, 4.2 - 增强功能
+5. **后期处理**: 5.1, 5.2, 5.3, 6.x - 部署运维

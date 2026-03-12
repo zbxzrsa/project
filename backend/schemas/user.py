@@ -32,6 +32,8 @@ class UserResponse(UserBase):
     is_superuser: str
     created_at: datetime
     updated_at: datetime
+    github_id: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -62,10 +64,12 @@ class PasswordResetConfirm(BaseModel):
 
 class OAuthUrlResponse(BaseModel):
     url: str
+    state: str
 
 
 class OAuthCallbackRequest(BaseModel):
     code: str
+    state: str
 
 
 class GitHubUser(BaseModel):

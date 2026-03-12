@@ -1,7 +1,9 @@
 from urllib.parse import urlencode
 import httpx
+import secrets
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -30,15 +32,19 @@ from backend.core.config import settings
 
 router = APIRouter(prefix="/oauth", tags=["OAuth"])
 
+GITHUB_OAUTH_STATES: dict[str, dict] = {}
 
-def get_github_authorization_url() -> str:
+
+def get_github_authorization_url() -> tuple[str, str]:
+    state = secrets.token_urlsafe(32)
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
         "redirect_uri": settings.GITHUB_REDIRECT_URI,
         "scope": "user:email read:user",
-        "state": str(uuid4()),
+        "state": state,
     }
-    return f"https://github.com/login/oauth/authorize?{urlencode(params)}"
+    GITHUB_OAUTH_STATES[state] = {"created_at": "now"}
+    return f"https://github.com/login/oauth/authorize?{urlencode(params)}", state
 
 
 async def exchange_code_for_token(code: str) -> str:
@@ -105,8 +111,8 @@ async def github_oauth_start():
             detail="GitHub OAuth is not configured",
         )
     
-    url = get_github_authorization_url()
-    return OAuthUrlResponse(url=url)
+    url, state = get_github_authorization_url()
+    return OAuthUrlResponse(url=url, state=state)
 
 
 @router.post("/github/callback", response_model=TokenResponse)
@@ -114,6 +120,12 @@ async def github_oauth_callback(
     callback_data: OAuthCallbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
+    state = callback_data.state
+    if state not in GITHUB_OAUTH_STATES:
+        raise UnauthorizedException("Invalid OAuth state")
+    
+    del GITHUB_OAUTH_STATES[state]
+    
     access_token = await exchange_code_for_token(callback_data.code)
     github_user = await get_github_user(access_token)
     
