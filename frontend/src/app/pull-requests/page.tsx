@@ -2,41 +2,91 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Project, AnalysisTask } from "@/types";
 
 export default function PullRequestsPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<AnalysisTask[]>([]);
+  const [projects, setProjects] = useState<{id: string; name: string}[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState("all");
 
   useEffect(() => {
     const t = localStorage.getItem("access_token");
     if (!t) { router.push("/login"); return; }
-    Promise.all([fetch("/api/v1/projects",{h:{Authorization:`Bearer ${t}`}}),fetch("/api/v1/tasks",{h:{Authorization:`Bearer ${t}`}})]).then(([r1,r2])=>{if(r1.ok)setProjects(...[await r1.json()]);if(r2.ok)setTasks(...[(await r2.json())||[]]);}).finally(()=>setLoading(false));
+    Promise.all([
+      fetch("/api/v1/projects",{headers:{Authorization:`Bearer ${t}`}}),
+      fetch("/api/v1/tasks",{headers:{Authorization:`Bearer ${t}`}})
+    ]).then(([r1,r2])=>{
+      if(r1.ok) r1.json().then(d=>setProjects(d||[]));
+      if(r2.ok) r2.json().then(d=>setTasks(d||[]));
+    }).finally(()=>setLoading(false));
   },[router]);
 
-  const fTasks = sel==="all"?tasks:tasks.filter(t=>t.project_id===sel);
+  const fTasks = sel === "all" ? tasks : tasks.filter(t => t.project_id === sel);
   const logout = () => { localStorage.clear(); router.push("/login"); };
-  const getStatusIcon = (s:string) => s==="completed"?"✅":s==="failed"?"❌":s==="processing"?"🔄":"⏳";
+  const getStatusBadge = (s: string) => {
+    if (s === "completed") return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Completed</span>;
+    if (s === "failed") return <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Failed</span>;
+    if (s === "processing") return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Processing</span>;
+    return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">{s}</span>;
+  };
 
-  if (loading) return <div className="min-h-screen bg-[#1b2838] flex items-center justify-center"><div className="text-[#66c0f4] text-xl">Loading...</div></div>;
-
-  const nav = [{h:"/dashboard",l:"Dashboard"},{h:"/projects",l:"Projects"},{h:"/pull-requests",l:"Pull Requests"},{h:"/architecture",l:"Architecture"},{h:"/analysis-queue",l:"Analysis Queue"}];
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-gray-600">Loading...</div></div>;
 
   return (
-    <div className="min-h-screen bg-[#1b2838]">
-      <nav className="bg-[#171a21] border-b border-[#2a475e]"><div className="max-w-7xl mx-auto px-4"><div className="flex justify-between h-16">
-        <div className="flex items-center gap-8"><Link href="/dashboard" className="text-2xl font-bold text-[#66c0f4]">CodeQuality AI</Link>
-          <div className="hidden md:flex gap-1">{nav.map(n=>(<Link key={n.h} href={n.h} className={`px-4 py-2 rounded text-sm ${n.h==="/pull-requests"?"bg-[#66c0f4] text-[#171a21]":"text-[#c7d5e0] hover:bg-[#2a475e]"}`}>{n.l}</Link>))}</div>
-        </div><button onClick={logout} className="text-[#c7d5e0] hover:text-white text-sm">Logout</button>
-      </div></div></nav>
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between mb-6"><h1 className="text-3xl font-bold text-white">Pull Requests</h1><select value={sel} onChange={e=>setSel(e.target.value)} className="px-4 py-2 bg-[#0f1319] border border-[#3d5a73] text-white rounded">{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-        <div className="bg-[#171a21] rounded-lg border border-[#2a475e] overflow-hidden">
-          <table className="w-full"><thead className="bg-[#0f1319]"><tr><th className="px-4 py-3 text-left text-[#8f98a0] text-sm">Branch</th><th className="px-4 py-3 text-left text-[#8f98a0] text-sm">Project</th><th className="px-4 py-3 text-left text-[#8f98a0] text-sm">Status</th><th className="px-4 py-3 text-left text-[#8f98a0] text-sm">Created</th></tr></thead>
-            <tbody className="divide-y divide-[#2a475e]">{fTasks.length===0?<tr><td colSpan={4} className="px-4 py-12 text-center text-[#c7d5e0]">No branches</td></tr>:fTasks.map(t=><tr key={t.id} className="hover:bg-[#2a475e]"><td className="px-4 py-3 text-white">🌿 {t.branch_name}</td><td className="px-4 py-3 text-[#c7d5e0]">{projects.find(p=>p.id===t.project_id)?.name||"Unknown"}</td><td className="px-4 py-3">{getStatusIcon(t.status)} <span className="text-[#c7d5e0]">{t.status}</span></td><td className="px-4 py-3 text-[#8f98a0]">{new Date(t.created_at).toLocaleString()}</td></tr>)}</tbody>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex justify-between h-14">
+            <div className="flex items-center gap-6">
+              <Link href="/dashboard" className="text-lg font-semibold text-gray-800">CodeQuality AI</Link>
+              <div className="flex gap-1">
+                <Link href="/dashboard" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Dashboard</Link>
+                <Link href="/projects" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Projects</Link>
+                <Link href="/pull-requests" className="px-3 py-2 text-sm rounded bg-gray-100 text-gray-900">Pull Requests</Link>
+                <Link href="/architecture" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Architecture</Link>
+              </div>
+            </div>
+            <button onClick={logout} className="text-sm text-gray-600 hover:text-gray-900">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Pull Requests</h1>
+          <select value={sel} onChange={e => setSel(e.target.value)} className="px-3 py-2 border border-gray-300 rounded">
+            <option value="all">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Branch</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Project</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {fTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-gray-500">No branches</td>
+                </tr>
+              ) : (
+                fTasks.map(t => (
+                  <tr key={t.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900">{t.branch_name}</td>
+                    <td className="px-4 py-3 text-gray-600">{projects.find(p => p.id === t.project_id)?.name || "Unknown"}</td>
+                    <td className="px-4 py-3">{getStatusBadge(t.status)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{new Date(t.created_at).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
         </div>
       </main>

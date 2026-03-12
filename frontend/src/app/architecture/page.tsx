@@ -2,156 +2,160 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Project, ArchitectureGraph } from "@/types";
+
+interface GraphNode {
+  id: string;
+  name: string;
+  type: string;
+}
 
 export default function ArchitecturePage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [sel, setSel] = useState("");
-  const [graph, setGraph] = useState<ArchitectureGraph | null>(null);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProject, setSelectedProject] = useState("");
+  const [graph, setGraph] = useState<{ nodes: GraphNode[]; edges: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [filter, setFilter] = useState("");
   const [zoom, setZoom] = useState(1);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const t = localStorage.getItem("access_token");
-    if (!t) { router.push("/login"); return; }
-    fetch("/api/v1/projects",{headers:{Authorization:`Bearer ${t}`}}).then(r=>r.ok&&r.json()).then(d=>{setProjects(d);if(d.length)setSel(d[0].id);}).finally(()=>setLoading(false));
-  },[router]);
+    const token = localStorage.getItem("access_token");
+    if (!token) { router.push("/login"); return; }
+    fetchProjects();
+  }, [router]);
 
-  useEffect(() => { if(sel) fetch(`/api/v1/projects/${sel}/architecture`,{headers:{Authorization:`Bearer ${localStorage.getItem("access_token")!}}).then(r=>r.ok&&r.json()).then(setGraph); },[sel]);
+  useEffect(() => {
+    if (selectedProject) fetchGraph();
+  }, [selectedProject]);
+
+  const fetchProjects = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${localStorage.getItem("access_token")}` };
+      const res = await fetch("/api/v1/projects", { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+        if (data.length) setSelectedProject(data[0].id);
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const fetchGraph = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${localStorage.getItem("access_token")}` };
+      const res = await fetch(`/api/v1/projects/${selectedProject}/architecture`, { headers });
+      if (res.ok) setGraph(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  const analyzeArchitecture = async () => {
+    setAnalyzing(true);
+    try {
+      const headers = { Authorization: `Bearer ${localStorage.getItem("access_token")}` };
+      await fetch(`/api/v1/projects/${selectedProject}/analyze`, { headers, method: "POST" });
+      await fetchGraph();
+    } catch (e) { console.error(e); }
+    finally { setAnalyzing(false); }
+  };
 
   const logout = () => { localStorage.clear(); router.push("/login"); };
   
-  const getColor = (t:string) => {
-    if (t === "file") return "bg-blue-900 border-blue-700";
-    if (t === "module") return "bg-green-900 border-green-700";
-    if (t === "class") return "bg-purple-900 border-purple-700";
-    if (t === "function") return "bg-yellow-900 border-yellow-700";
-    return "bg-gray-800 border-gray-700";
+  const getColor = (type: string) => {
+    const colors: Record<string, string> = { module: "#3b82f6", class: "#8b5cf6", function: "#10b981", file: "#f59e0b" };
+    return colors[type] || "#6b7280";
   };
 
-  const getBorderColor = (t:string) => {
-    if (t === "file") return "hover:border-blue-500";
-    if (t === "module") return "hover:border-green-500";
-    if (t === "class") return "hover:border-purple-500";
-    if (t === "function") return "hover:border-yellow-500";
-    return "hover:border-gray-500";
-  };
-
-  const filteredNodes = filter === "all" ? graph?.nodes : graph?.nodes.filter(n => n.type === filter) || [];
+  const filteredNodes = filter === "all" || !filter ? graph?.nodes || [] : graph?.nodes.filter(n => n.type === filter) || [];
   
   const handleZoomIn = () => setZoom(z => Math.min(2, z + 0.2));
   const handleZoomOut = () => setZoom(z => Math.max(0.4, z - 0.2));
   const handleReset = () => { setZoom(1); setFilter("all"); setSelectedNode(null); };
 
   const handleExport = (format: string) => {
-    if (!graph) return;
-    const data = format === "json" ? JSON.stringify(graph, null, 2) : `Nodes: ${graph.nodeCount}\nEdges: ${graph.edgeCount}`;
-    const blob = new Blob([data], { type: format === "json" ? "application/json" : "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `architecture.${format}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    window.open(`/api/v1/projects/${selectedProject}/export?format=${format}`, "_blank");
   };
 
-  if (loading) return <div className="min-h-screen bg-[#1b2838] flex items-center justify-center"><div className="text-[#66c0f4] text-xl">Loading...</div></div>;
-
-  const nav = [
-    {h:"/dashboard",l:"Dashboard"},
-    {h:"/projects",l:"Projects"},
-    {h:"/pull-requests",l:"Pull Requests"},
-    {h:"/architecture",l:"Architecture"},
-    {h:"/analysis-queue",l:"Analysis Queue"},
-    {h:"/settings",l:"Settings"},
-  ];
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-gray-600">Loading...</div></div>;
 
   return (
-    <div className="min-h-screen bg-[#1b2838]">
-      <nav className="bg-[#171a21] border-b border-[#2a475e]">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-8">
-              <Link href="/dashboard" className="text-2xl font-bold text-[#66c0f4]">CodeQuality AI</Link>
-              <div className="hidden md:flex gap-1">
-                {nav.map(n=>(<Link key={n.h} href={n.h} className={`px-4 py-2 rounded text-sm ${n.h==="/architecture"?"bg-[#66c0f4] text-[#171a21]":"text-[#c7d5e0] hover:bg-[#2a475e]"}`}>{n.l}</Link>))}
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex justify-between h-14">
+            <div className="flex items-center gap-6">
+              <Link href="/dashboard" className="text-lg font-semibold text-gray-800">CodeQuality AI</Link>
+              <div className="flex gap-1">
+                <Link href="/dashboard" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Dashboard</Link>
+                <Link href="/projects" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Projects</Link>
+                <Link href="/pull-requests" className="px-3 py-2 text-sm rounded text-gray-600 hover:bg-gray-100">Pull Requests</Link>
+                <Link href="/architecture" className="px-3 py-2 text-sm rounded bg-gray-100 text-gray-900">Architecture</Link>
               </div>
             </div>
-            <button onClick={logout} className="text-[#c7d5e0] hover:text-white text-sm">Logout</button>
+            <button onClick={logout} className="text-sm text-gray-600 hover:text-gray-900">Logout</button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between mb-6">
-          <h1 className="text-3xl font-bold text-white">Architecture</h1>
-          <select value={sel} onChange={e=>setSel(e.target.value)} className="px-4 py-2 bg-[#0f1319] border border-[#3d5a73] text-white rounded">
-            {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          <button onClick={handleZoomOut} className="px-3 py-1 bg-[#171a21] border border-[#2a475e] text-white rounded hover:bg-[#2a475e]">-</button>
-          <span className="px-3 py-1 text-white">{Math.round(zoom*100)}%</span>
-          <button onClick={handleZoomIn} className="px-3 py-1 bg-[#171a21] border border-[#2a475e] text-white rounded hover:bg-[#2a475e]">+</button>
-          <button onClick={handleReset} className="px-3 py-1 bg-[#171a21] border border-[#2a475e] text-white rounded hover:bg-[#2a475e] ml-4">Reset</button>
-          <select value={filter} onChange={e=>setFilter(e.target.value)} className="ml-4 px-3 py-1 bg-[#0f1319] border border-[#3d5a73] text-white rounded">
-            <option value="all">All Types</option>
-            <option value="module">Modules</option>
-            <option value="class">Classes</option>
-            <option value="function">Functions</option>
-            <option value="file">Files</option>
-          </select>
-          <div className="ml-auto flex gap-2">
-            <button onClick={()=>handleExport("json")} className="px-3 py-1 bg-[#171a21] border border-[#2a475e] text-white rounded hover:bg-[#2a475e]">Export JSON</button>
-            <button onClick={()=>handleExport("txt")} className="px-3 py-1 bg-[#171a21] border border-[#2a475e] text-white rounded hover:bg-[#2a475e]">Export TXT</button>
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Architecture Analysis</h1>
+          <div className="flex gap-2">
+            <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="px-3 py-2 border border-gray-300 rounded">
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button onClick={analyzeArchitecture} disabled={analyzing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              {analyzing ? "Analyzing..." : "Analyze"}
+            </button>
           </div>
         </div>
 
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setFilter("all")} className={`px-3 py-1 rounded text-sm ${filter === "all" ? "bg-gray-200" : "bg-white border"}`}>All</button>
+          <button onClick={() => setFilter("module")} className={`px-3 py-1 rounded text-sm ${filter === "module" ? "bg-gray-200" : "bg-white border"}`}>Modules</button>
+          <button onClick={() => setFilter("class")} className={`px-3 py-1 rounded text-sm ${filter === "class" ? "bg-gray-200" : "bg-white border"}`}>Classes</button>
+          <button onClick={() => setFilter("function")} className={`px-3 py-1 rounded text-sm ${filter === "function" ? "bg-gray-200" : "bg-white border"}`}>Functions</button>
+          <div className="flex-1"></div>
+          <button onClick={handleZoomOut} className="px-3 py-1 border rounded">-</button>
+          <button onClick={handleReset} className="px-3 py-1 border rounded">{Math.round(zoom * 100)}%</button>
+          <button onClick={handleZoomIn} className="px-3 py-1 border rounded">+</button>
+          <button onClick={() => handleExport("svg")} className="px-3 py-1 border rounded">SVG</button>
+          <button onClick={() => handleExport("png")} className="px-3 py-1 border rounded">PNG</button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="bg-[#171a21] rounded-lg border border-[#2a475e] p-4">
-            <h3 className="text-[#66c0f4] font-semibold mb-4">Modules ({filteredNodes.length})</h3>
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {filteredNodes.map(n=>(
-                <div key={n.id} onClick={()=>setSelectedNode(selectedNode===n.id?null:n.id)} 
-                     className={`p-3 rounded cursor-pointer ${getColor(n.type)} border ${getBorderColor(n.type)} ${selectedNode===n.id?"ring-2 ring-white":""}`}>
-                  <div className="text-white font-medium">{n.name}</div>
-                  <div className="text-[#8f98a0] text-xs">{n.type}</div>
+          <div className="bg-white border border-gray-200 rounded">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h3 className="font-medium text-gray-800">Entities ({filteredNodes.length})</h3>
+            </div>
+            <div className="max-h-96 overflow-y-auto p-2">
+              {filteredNodes.slice(0, 50).map((node) => (
+                <div key={node.id} onClick={() => setSelectedNode(node.id)} className={`p-2 rounded cursor-pointer ${selectedNode === node.id ? "bg-blue-50" : "hover:bg-gray-50"}`}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColor(node.type) }}></div>
+                    <div className="text-sm text-gray-700">{node.name}</div>
+                  </div>
+                  <div className="text-xs text-gray-400 ml-5">{node.type}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="lg:col-span-3 bg-[#171a21] rounded-lg border border-[#2a475e] min-h-[500px] p-6 overflow-auto" ref={containerRef}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[#66c0f4] font-semibold">
-                Graph View {graph && `(${filteredNodes.length} nodes, ${graph.edgeCount} edges)`}
-              </h3>
-              {selectedNode && <button onClick={()=>setSelectedNode(null)} className="text-[#66c0f4] hover:underline">Clear selection</button>}
-            </div>
-            {!graph ? <div className="text-[#c7d5e0] text-center py-20">Select a project</div> : filteredNodes.length === 0 ? <div className="text-[#c7d5e0] text-center py-20">No nodes found</div> : (
-              <div className="relative" style={{transform:`scale(${zoom})`, transformOrigin:"top left", minWidth:"100%", minHeight:"400px"}}>
-                {filteredNodes.map((node, i) => {
-                  const x = (i % 5) * 200 + 50;
-                  const y = Math.floor(i / 5) * 150 + 50;
-                  return (
-                    <div key={node.id} 
-                         onClick={()=>setSelectedNode(node.id)}
-                         className={`absolute p-4 rounded-lg border-2 cursor-pointer transition-all ${getColor(node.type)} ${getBorderColor(node.type)} ${selectedNode===node.id?"ring-2 ring-white":""}`}
-                         style={{left:x, top:y}}>
-                      <div className="text-white font-medium whitespace-nowrap">{node.name}</div>
-                      <div className="text-[#8f98a0] text-xs">{node.type}</div>
-                      {node.file_path && <div className="text-[#8f98a0] text-xs mt-1 truncate max-w-[150px]">{node.file_path}</div>}
-                    </div>
-                  );
-                })}
+          <div className="lg:col-span-3 bg-white border border-gray-200 rounded min-h-96 p-4">
+            {!graph ? (
+              <div className="flex items-center justify-center h-full text-gray-500">Select a project and click Analyze</div>
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center" style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}>
+                {filteredNodes.slice(0, 40).map((node) => (
+                  <div key={node.id} onClick={() => setSelectedNode(node.id)} className={`p-3 rounded border cursor-pointer ${selectedNode === node.id ? "border-blue-500" : "border-gray-200"}`} style={{ backgroundColor: getColor(node.type) + "20", borderLeftColor: getColor(node.type), borderLeftWidth: 3 }}>
+                    <div className="font-medium text-gray-900">{node.name}</div>
+                    <div className="text-xs text-gray-500">{node.type}</div>
+                  </div>
+                ))}
               </div>
             )}
-            {filteredNodes.length > 20 && <div className="text-[#8f98a0] text-sm mt-4">Showing first 20 nodes. Use filter to narrow down.</div>}
           </div>
         </div>
       </main>
