@@ -2,8 +2,14 @@ from typing import Optional
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field
+from enum import Enum
 
-from backend.models.review import ReviewStatus
+
+class ReviewStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class ReviewBase(BaseModel):

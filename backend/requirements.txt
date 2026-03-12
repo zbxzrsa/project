@@ -48,10 +48,9 @@ watchtower==3.0.0
 cryptography==42.0.2
 
 # Testing
-pytest==8.0.0
+pytest==7.4.4
 pytest-asyncio==0.23.4
 pytest-cov==4.1.0
-httpx==0.26.0
 
 # Development
 ipython==8.21.0

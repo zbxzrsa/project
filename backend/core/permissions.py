@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import set
 
 
 class UserRole(str, Enum):
