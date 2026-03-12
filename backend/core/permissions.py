@@ -2,10 +2,12 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    SUPERADMIN = "superadmin"
-    ADMIN = "admin"
-    USER = "user"
-    READONLY = "readonly"
+    """5 hierarchical user roles ordered by permission scope from lowest to highest"""
+    VISITOR = "visitor"
+    PROGRAMMER = "programmer"
+    REVIEWER = "reviewer"
+    MANAGER = "manager"
+    ADMINISTRATOR = "administrator"
 
 
 class Permission(str, Enum):
@@ -42,18 +44,71 @@ class Permission(str, Enum):
     # Audit Logs
     READ_AUDIT_LOGS = "read_audit_logs"
 
-    # System
+    # System Settings
     SYSTEM_SETTINGS = "system_settings"
+    
+    # Compliance
+    MANAGE_COMPLIANCE = "manage_compliance"
+    VIEW_COMPLIANCE = "view_compliance"
+    
+    # Export
+    EXPORT_REPORTS = "export_reports"
 
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
-    UserRole.SUPERADMIN: set(Permission),
-    UserRole.ADMIN: {
+    UserRole.VISITOR: {
+        Permission.READ_PROJECT,
+        Permission.READ_REVIEW,
+        Permission.READ_ANALYSIS,
+    },
+    UserRole.PROGRAMMER: {
+        Permission.READ_USER,
+        Permission.READ_TENANT,
+        Permission.CREATE_PROJECT,
+        Permission.READ_PROJECT,
+        Permission.UPDATE_PROJECT,
+        Permission.CREATE_REVIEW,
+        Permission.READ_REVIEW,
+        Permission.RUN_ANALYSIS,
+        Permission.READ_ANALYSIS,
+    },
+    UserRole.REVIEWER: {
+        Permission.READ_USER,
+        Permission.READ_TENANT,
+        Permission.CREATE_PROJECT,
+        Permission.READ_PROJECT,
+        Permission.UPDATE_PROJECT,
+        Permission.CREATE_REVIEW,
+        Permission.READ_REVIEW,
+        Permission.DELETE_REVIEW,
+        Permission.RUN_ANALYSIS,
+        Permission.READ_ANALYSIS,
+        Permission.VIEW_COMPLIANCE,
+    },
+    UserRole.MANAGER: {
+        Permission.READ_USER,
+        Permission.READ_TENANT,
+        Permission.CREATE_PROJECT,
+        Permission.READ_PROJECT,
+        Permission.UPDATE_PROJECT,
+        Permission.DELETE_PROJECT,
+        Permission.CREATE_REVIEW,
+        Permission.READ_REVIEW,
+        Permission.DELETE_REVIEW,
+        Permission.RUN_ANALYSIS,
+        Permission.READ_ANALYSIS,
+        Permission.VIEW_COMPLIANCE,
+        Permission.EXPORT_REPORTS,
+    },
+    UserRole.ADMINISTRATOR: {
         Permission.CREATE_USER,
         Permission.READ_USER,
         Permission.UPDATE_USER,
+        Permission.DELETE_USER,
+        Permission.CREATE_TENANT,
         Permission.READ_TENANT,
         Permission.UPDATE_TENANT,
+        Permission.DELETE_TENANT,
         Permission.CREATE_PROJECT,
         Permission.READ_PROJECT,
         Permission.UPDATE_PROJECT,
@@ -65,24 +120,10 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.READ_ANALYSIS,
         Permission.MANAGE_FEATURE_FLAGS,
         Permission.READ_AUDIT_LOGS,
-    },
-    UserRole.USER: {
-        Permission.READ_USER,
-        Permission.READ_TENANT,
-        Permission.CREATE_PROJECT,
-        Permission.READ_PROJECT,
-        Permission.UPDATE_PROJECT,
-        Permission.CREATE_REVIEW,
-        Permission.READ_REVIEW,
-        Permission.RUN_ANALYSIS,
-        Permission.READ_ANALYSIS,
-    },
-    UserRole.READONLY: {
-        Permission.READ_USER,
-        Permission.READ_TENANT,
-        Permission.READ_PROJECT,
-        Permission.READ_REVIEW,
-        Permission.READ_ANALYSIS,
+        Permission.SYSTEM_SETTINGS,
+        Permission.MANAGE_COMPLIANCE,
+        Permission.VIEW_COMPLIANCE,
+        Permission.EXPORT_REPORTS,
     },
 }
 
