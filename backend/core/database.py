@@ -44,5 +44,6 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
+    from backend.models import Tenant, User, Project, Review, FeatureFlag, AuditLog
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
