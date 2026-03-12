@@ -20,6 +20,7 @@ from backend.schemas.feature_flag import (
     FeatureFlagResponse,
 )
 from backend.schemas.audit_log import AuditLogResponse
+from backend.schemas.api_key import APIKeyCreate, APIKeyResponse, APIKeyWithSecret
 
 __all__ = [
     "TenantCreate",
@@ -46,4 +47,7 @@ __all__ = [
     "FeatureFlagUpdate",
     "FeatureFlagResponse",
     "AuditLogResponse",
+    "APIKeyCreate",
+    "APIKeyResponse",
+    "APIKeyWithSecret",
 ]

@@ -10,6 +10,8 @@ from backend.api.v1 import (
     analysis,
     dashboard,
     webhooks,
+    api_keys,
+    audit_logs,
 )
 
 
@@ -24,3 +26,5 @@ api_router.include_router(oauth.router)
 api_router.include_router(analysis.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(webhooks.router)
+api_router.include_router(api_keys.router)
+api_router.include_router(audit_logs.router)
