@@ -19,17 +19,17 @@ class LLMProvider(ABC):
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
         self.api_key = api_key
         self.base_url = base_url
-
-    @abstractmethod
-    async def generate(
-        self,
-        messages: List[LLMMessage],
-        model: str,
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        **kwargs
-    ) -> LLMResponse:
-        pass
+        self._provider_name: Optional[str] = None
+    
+    @property
+    def provider_name(self) -> str:
+        if self._provider_name:
+            return self._provider_name
+        return "unknown"
+    
+    @provider_name.setter
+    def provider_name(self, value: str):
+        self._provider_name = value
 
     @abstractmethod
     async def validate_connection(self) -> bool:

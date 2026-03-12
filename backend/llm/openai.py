@@ -7,17 +7,31 @@ from backend.core.config import settings
 
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
         super().__init__(api_key=api_key or settings.OPENAI_API_KEY)
-        self.client = AsyncOpenAI(
-            api_key=self.api_key,
-            timeout=settings.LLM_TIMEOUT_SECONDS,
-            max_retries=3,
-        )
-
+        
+        # Support custom base_url for LM Studio and other OpenAI-compatible APIs
+        if base_url:
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url=base_url,
+                timeout=settings.LLM_TIMEOUT_SECONDS,
+                max_retries=3,
+            )
+        else:
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                timeout=settings.LLM_TIMEOUT_SECONDS,
+                max_retries=3,
+            )
+    
     @property
     def provider_name(self) -> str:
         return "openai"
+    
+    @provider_name.setter
+    def provider_name(self, value: str):
+        self._provider_name = value
 
     async def generate(
         self,

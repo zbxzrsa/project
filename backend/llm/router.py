@@ -11,7 +11,7 @@ from backend.core.config import settings
 
 
 class LLMProviderType(str, Enum):
-    INTERNAL_OLLAMA = "internal_ollama"
+    LM_STUDIO = "lm_studio"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
@@ -21,7 +21,7 @@ class LLMRouter:
     def __init__(
         self,
         providers: Optional[List[LLMProvider]] = None,
-        primary_provider: LLMProviderType = LLMProviderType.INTERNAL_OLLAMA,
+        primary_provider: LLMProviderType = LLMProviderType.LM_STUDIO,
         user_api_key: Optional[str] = None,
     ):
         self.providers: Dict[LLMProviderType, LLMProvider] = {}
@@ -50,16 +50,18 @@ class LLMRouter:
     def _initialize_default_providers(self):
         """Initialize all available LLM providers."""
         
-        # 1. Internal Ollama (Priority 1)
+        # 1. LM Studio (Priority 1) - OpenAI-compatible API
         try:
-            internal_ollama = OllamaProvider(
-                base_url=settings.INTERNAL_OLLAMA_URL,
-                model=settings.INTERNAL_OLLAMA_MODEL
+            lm_studio = OpenAIProvider(
+                api_key="not-needed",  # LM Studio doesn't require API key
+                base_url=settings.LM_STUDIO_URL
             )
-            self.providers[LLMProviderType.INTERNAL_OLLAMA] = internal_ollama
-            logger.info(f"Initialized internal Ollama: {settings.INTERNAL_OLLAMA_URL}")
+            # Override provider_name for LM Studio
+            lm_studio.provider_name = "lm_studio"
+            self.providers[LLMProviderType.LM_STUDIO] = lm_studio
+            logger.info(f"Initialized LM Studio: {settings.LM_STUDIO_URL}")
         except Exception as e:
-            logger.warning(f"Failed to initialize internal Ollama: {e}")
+            logger.warning(f"Failed to initialize LM Studio: {e}")
         
         # 2. OpenAI - use user's key first, then default key
         try:
@@ -179,7 +181,7 @@ class LLMRouter:
     def _get_default_model(self, provider: LLMProviderType) -> str:
         """Get default model for provider."""
         defaults = {
-            LLMProviderType.INTERNAL_OLLAMA: settings.INTERNAL_OLLAMA_MODEL,
+            LLMProviderType.LM_STUDIO: settings.LM_STUDIO_MODEL,
             LLMProviderType.OPENAI: "gpt-4o",
             LLMProviderType.ANTHROPIC: "claude-sonnet-4-20250514",
             LLMProviderType.OLLAMA: settings.OLLAMA_MODEL,
